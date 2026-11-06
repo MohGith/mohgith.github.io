@@ -284,7 +284,7 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         textures.add(texture);
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-        const image = new THREE.Mesh(new THREE.PlaneGeometry(1.16, 0.77), new THREE.MeshBasicMaterial({ map: texture }));
+        const image = new THREE.Mesh(new THREE.PlaneGeometry(1.16, 0.77), new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }));
         image.rotation.x = -Math.PI / 2;
         image.position.set(0, 0.027, -0.055);
         group.add(image);
@@ -301,8 +301,12 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
       let settledNotified = false;
       let viewHeight = 6.8;
       let viewAspect = 1.2;
-      const startPosition = camera.position.clone();
       const startQuaternion = camera.quaternion.clone();
+      const startCenter = baseCenter.clone();
+      const orbitCenter = baseCenter.clone();
+      const orbitNormal = new THREE.Vector3();
+      let orbitDistance = basePosition.distanceTo(baseCenter);
+      let startOrbitDistance = orbitDistance;
       const destinationPosition = new THREE.Vector3();
       const destinationQuaternion = camera.quaternion.clone();
       let startZoom = camera.zoom;
@@ -390,8 +394,10 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         const focusView = canonicalFocus();
         if (focusView !== lastFocus) {
           lastFocus = focusView;
-          startPosition.copy(camera.position);
           startQuaternion.copy(camera.quaternion);
+          orbitNormal.set(0, 0, 1).applyQuaternion(camera.quaternion);
+          startCenter.copy(camera.position).addScaledVector(orbitNormal, -orbitDistance);
+          startOrbitDistance = orbitDistance;
           startZoom = camera.zoom;
           startLidScale = lid.scale.y;
           transitionStarted = now;
@@ -411,9 +417,15 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         updateDestination(focusView);
         const targetZoom = closeupZoom(focusView);
         if (transitionActive) {
-          camera.position.lerpVectors(startPosition, destinationPosition, eased);
           camera.quaternion.slerpQuaternions(startQuaternion, destinationQuaternion, eased);
-          camera.zoom = startZoom + (targetZoom - startZoom) * eased;
+          const centerProgress = focusView === "gallery" ? 1 - (1 - eased) ** 2 : eased;
+          orbitCenter.lerpVectors(startCenter, focusView === "desk" ? baseCenter : focusCenter, centerProgress);
+          orbitDistance = startOrbitDistance + ((focusView === "desk" ? basePosition.distanceTo(baseCenter) : 12) - startOrbitDistance) * eased;
+          orbitNormal.set(0, 0, 1).applyQuaternion(camera.quaternion);
+          camera.position.copy(orbitCenter).addScaledVector(orbitNormal, orbitDistance);
+          camera.zoom = focusView === "gallery"
+            ? startZoom * (targetZoom / startZoom) ** eased
+            : startZoom + (targetZoom - startZoom) * eased;
           if (progress === 1) transitionActive = false;
         } else {
           // Keep the projected interface aligned after a responsive resize.
@@ -461,7 +473,10 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         camera.bottom = -viewHeight / 2;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height, false);
-        requestRender();
+        // Repaint the resized drawing buffer in the same frame. The gallery
+        // stage grows to the viewport, so waiting one frame here would flash.
+        if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        render();
       }
       const raycaster = new THREE.Raycaster();
       const hitPoint = new THREE.Vector2();

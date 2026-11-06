@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type KeyboardEvent } from "react";
 import { DeskScene, type ScreenBounds } from "./DeskScene";
+import { FriesNote } from "./FriesNote";
 import "../../public/journal.css";
 
 type Publication = { title: string; journal: string; year: string; authors: string };
@@ -27,6 +28,7 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
   const [tab, setTab] = useState<ResearchTab>("overview");
   const [screenBounds, setScreenBounds] = useState<ScreenBounds | null>(null);
   const [panelReady, setPanelReady] = useState(false);
+  const [galleryCover, setGalleryCover] = useState(false);
   const viewRef = useRef<View>("desk");
   const sceneRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLElement>(null);
@@ -41,6 +43,7 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
     viewRef.current = "desk";
     setView("desk");
     setPanelReady(false);
+    setGalleryCover(false);
     setScreenBounds(null);
     if (window.location.hash === "#research") window.history.replaceState(null, "", window.location.pathname + window.location.search);
     window.requestAnimationFrame(() => lastControl.current?.focus({ preventScroll: true }));
@@ -49,7 +52,17 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
   function settled(target: "research" | "gallery") {
     if (viewRef.current !== target) return;
     clearTimer();
-    if (target === "gallery") { window.location.assign(galleryHref); return; }
+    if (target === "gallery") {
+      // Carry the same full-bleed print across the document navigation.
+      // The Gallery reveals itself beneath this photograph on arrival.
+      setGalleryCover(true);
+      const destination = new URL(galleryHref, window.location.href);
+      destination.searchParams.set("from", "desk");
+      safetyTimer.current = window.setTimeout(() => {
+        if (viewRef.current === "gallery") window.location.assign(destination.href);
+      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320);
+      return;
+    }
     setPanelReady(true);
   }
 
@@ -59,6 +72,7 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
     viewRef.current = target;
     setView(target);
     setPanelReady(false);
+    setGalleryCover(false);
     setScreenBounds(null);
     setTab("overview");
     if (target === "research" && window.location.hash !== "#research") window.history.pushState(null, "", "#research");
@@ -167,7 +181,6 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
         </section>
       </div>
       <p className="j-identity-note" aria-hidden={view !== "desk"}>Computer vision researcher.<br /><em>Photographer, after hours.</em></p>
-      <p className="j-desk-direction" lang="zh-CN" aria-hidden={view !== "desk"}>电脑里是研究，<br />镜头外是日常。</p>
       <div className="j-object-labels" aria-label="Explore my desk" inert={view !== "desk"} aria-hidden={view !== "desk"}>
         <button type="button" className="j-label-research" onClick={() => open("research")}>Research<Arrow /></button>
         <button type="button" className="j-label-gallery" onClick={() => open("gallery")}>Gallery<Arrow /></button>
@@ -176,8 +189,9 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
 
     {view !== "desk" && <button type="button" ref={backRef} className="j-back-to-desk" onClick={closeDesk}>Back to desk <span aria-hidden="true">×</span></button>}
     <footer className="j-home-footer" inert={view !== "desk"} aria-hidden={view !== "desk"}>
-      <p lang="zh-CN">整点 Research，整点照片，整点薯条。</p>
-      <div><a href="/Jiawei_Guo_CV.pdf" target="_blank" rel="noreferrer">CV<Arrow /></a><a href={`mailto:${email}`}>Email<Arrow /></a><a href={studioHref}>Studio<Arrow /></a><span>© 2026</span></div>
+      <FriesNote />
+      <nav aria-label="Contact and links"><a href="/Jiawei_Guo_CV.pdf" target="_blank" rel="noreferrer">CV<Arrow /></a><a href={`mailto:${email}`}>Email<Arrow /></a><a href={studioHref}>Studio<Arrow /></a><span>© 2026</span></nav>
     </footer>
+    <div className="j-gallery-departure" data-visible={galleryCover} aria-hidden="true"><img src="/photos/0cd9ca70-1ea6-41f1-b301-9c0f15c629ce.jpg" alt="" /></div>
   </main>;
 }

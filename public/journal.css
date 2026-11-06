@@ -81,6 +81,7 @@ body:has(.j-single) {
 
 .j-scene-composition { position: absolute; inset: 0; overflow: hidden; }
 .j-scene-canvas { position: absolute; z-index: 2; inset: 3% 0 0; }
+.j-single[data-view="gallery"] .j-scene-canvas { inset: 0; transition: inset 1150ms cubic-bezier(.22,.61,.36,1); }
 .j-scene-canvas > .paper-desk { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; }
 .j-composition-type { position: absolute; z-index: 1; inset: 0; pointer-events: none; transition: opacity 260ms ease; }
 .j-single h1 { font-family: var(--j-serif); font-weight: 400; line-height: .85; letter-spacing: -.06em; }
@@ -93,8 +94,6 @@ body:has(.j-single) {
 .j-identity-note { position: absolute; z-index: 3; left: 77%; top: 25%; width: 230px; max-width: 23%; pointer-events: none; font-size: 18px; line-height: 1.65; color: #606959; transition: opacity 260ms ease; }
 .j-identity-note p + p { margin-top: 10px; }
 .j-identity-note small { display: block; margin-top: 18px; font-size: 12px; line-height: 1.6; letter-spacing: .09em; color: #7b8173; }
-.j-desk-direction { position: absolute; z-index: 3; left: 13%; top: 72%; max-width: 230px; transform: rotate(-4deg); font-family: "Journal Hand", "Songti SC", serif; font-size: 17px; line-height: 1.8; color: #758060; pointer-events: none; transition: opacity 260ms ease; }
-.j-desk-direction::after { content: "↗"; display: block; margin-left: 100px; margin-top: 4px; font-family: var(--j-serif); font-size: 31px; line-height: 1; color: #98a188; }
 .j-object-labels { position: absolute; z-index: 8; inset: 0; pointer-events: none; transition: opacity 200ms ease; }
 .j-object-labels button { position: absolute; min-height: 44px; border: 0; border-bottom: 1px solid #a2aa95; padding: 5px 1px; background: transparent; color: #4b5742; font-size: 16px; line-height: 1.4; pointer-events: auto; }
 .j-object-labels button::after { content: ""; position: absolute; height: 33px; width: 1px; top: calc(100% + 8px); left: 24px; transform: rotate(-21deg); transform-origin: top; background: #abb19f; pointer-events: none; }
@@ -104,15 +103,13 @@ body:has(.j-single) {
 .j-object-labels .j-label-gallery::after { height: 38px; top: auto; bottom: calc(100% + 4px); left: 15px; transform: rotate(28deg); transform-origin: bottom; }
 
 .j-home-footer { position: absolute; z-index: 15; left: 5.5%; right: 5.5%; bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; transition: opacity 180ms ease; }
-.j-home-footer > p { font-family: "Journal Hand", "Songti SC", serif; font-size: 17px; line-height: 1.7; color: #697554; transform: rotate(-1.5deg); }
-.j-home-footer > div,
 .j-home-footer nav { display: flex; align-items: center; gap: 24px; font-size: 14px; }
 .j-home-footer a { display: inline-flex; align-items: center; min-height: 38px; }
 .j-home-footer a:hover { color: var(--j-rust); }
 .j-home-footer small { color: #858c7a; font-size: 12px; white-space: nowrap; }
 .j-back-to-desk { position: absolute; z-index: 40; top: 24px; right: 5.5%; min-height: 44px; border: 1px solid var(--j-rule); padding: 9px 15px; background: var(--j-paper); color: var(--j-ink); font-size: 15px; }
 .j-back-to-desk > span { margin-left: 14px; font-size: 20px; line-height: 1; vertical-align: middle; }
-.j-single:not([data-view="desk"]) :is(.j-composition-type, .j-identity-note, .j-object-labels, .j-desk-direction, .j-home-footer) { opacity: 0; pointer-events: none; }
+.j-single:not([data-view="desk"]) :is(.j-composition-type, .j-identity-note, .j-object-labels, .j-home-footer) { opacity: 0; pointer-events: none; }
 .j-single:not([data-view="desk"]) .j-object-labels button { pointer-events: none; }
 .j-single:not([data-view="desk"]) .j-header nav,
 .j-single:not([data-view="desk"]) .j-header-note { visibility: hidden; }
@@ -189,11 +186,8 @@ body:has(.j-single) {
   .j-title-first { left: 5%; top: 27%; font-size: 150px; }
   .j-title-second { left: 70%; top: 62%; font-size: 123px; }
   .j-identity-note { left: 73%; top: 21%; max-width: 24%; font-size: 16px; }
-  .j-desk-direction { left: 7%; top: 74%; font-size: 16px; }
   .j-label-gallery { left: 77%; top: 79%; }
   .j-home-footer { left: 4%; right: 4%; }
-  .j-home-footer > p { max-width: 45%; font-size: 15px; }
-  .j-home-footer > div,
   .j-home-footer nav { gap: 18px; font-size: 13px; }
 }
 @media (max-width: 760px) {
@@ -210,18 +204,14 @@ body:has(.j-single) {
   .j-hello { left: 9%; top: 15%; font-size: 13px; }
   .j-identity-note { left: 9%; top: 32%; width: 76%; max-width: 76%; font-size: 14px; line-height: 1.6; }
   .j-identity-note small { display: none; }
-  .j-desk-direction { left: 9%; top: 78%; max-width: 170px; font-size: 14px; line-height: 1.7; }
-  .j-desk-direction::after { display: none; }
   .j-object-labels button { min-height: 42px; font-size: 14px; }
   .j-label-research { left: 10%; top: 45%; }
   .j-object-labels .j-label-research::after { height: 21px; }
   .j-label-gallery { left: 65%; top: 86%; }
   .j-object-labels .j-label-gallery::after { height: 25px; }
   .j-home-footer { left: 24px; right: 24px; bottom: 18px; align-items: flex-end; gap: 14px; }
-  .j-home-footer > p { max-width: 185px; font-size: 13px; line-height: 1.8; }
-  .j-home-footer > div,
-  .j-home-footer nav { justify-content: flex-end; flex-wrap: wrap; column-gap: 16px; row-gap: 0; max-width: 140px; font-size: 13px; }
-  .j-home-footer small, .j-home-footer > div > a:nth-of-type(3), .j-home-footer > div > span { display: none; }
+  .j-home-footer nav { justify-content: flex-end; flex-wrap: wrap; column-gap: 16px; row-gap: 0; width: 70px; flex: 0 0 70px; font-size: 13px; }
+  .j-home-footer small, .j-home-footer nav > a:nth-of-type(3), .j-home-footer nav > span { display: none; }
   .j-back-to-desk { top: 17px; right: 24px; min-height: 42px; padding: 7px 11px; font-size: 13px; }
   .j-single:not([data-view="desk"]) .j-scene-canvas { inset: 0; }
   .j-research-screen { font-size: 16px; }
@@ -256,8 +246,6 @@ body:has(.j-single) {
   .j-identity-note { top: 21%; font-size: 15px; }
   .j-identity-note small { margin-top: 12px; }
   .j-home-footer { bottom: 15px; }
-  .j-home-footer > p { font-size: 14px; }
-  .j-desk-direction { top: 76%; font-size: 14px; }
   .j-label-research { top: 18%; }
   .j-label-gallery { top: 76%; }
   .j-screen-topbar { padding-top: 10px; padding-bottom: 5px; }
@@ -271,10 +259,12 @@ body:has(.j-single) {
   .j-title-second { font-size: 78px; left: 61%; }
   .j-identity-note { left: 47%; font-size: 13px; }
   .j-home-footer { left: 18px; right: 18px; }
-  .j-home-footer > p { max-width: 155px; font-size: 12px; }
-  .j-home-footer > div,
   .j-home-footer nav { gap: 13px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .j-single *, .j-single *::before, .j-single *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.j-gallery-departure { position: fixed; z-index: 100; inset: 0; pointer-events: none; opacity: 0; visibility: hidden; background: #d0dee5; transition: opacity 280ms ease, visibility 280ms; }
+.j-gallery-departure[data-visible="true"] { opacity: 1; visibility: visible; }
+.j-gallery-departure img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.025); }
