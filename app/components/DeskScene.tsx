@@ -2,15 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** A small, quiet workspace. It only renders when the view actually changes. */
-export function DeskScene({ className = "", focus = "desk" }: { className?: string; focus?: "desk" | "research" | "camera" }) {
+type SceneTarget = "research" | "gallery";
+type SceneFocus = "desk" | "camera" | SceneTarget;
+type DeskSceneProps = {
+  className?: string;
+  focus?: SceneFocus;
+  immersive?: boolean;
+  onSelect?: (target: SceneTarget) => void;
+  onFocusSettled?: (target: SceneTarget) => void;
+};
+
+/** A physical workspace that becomes a close-up when a destination is selected. */
+export function DeskScene({ className = "", focus = "desk", immersive = false, onSelect, onFocusSettled }: DeskSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef(focus);
   const renderRequestRef = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(false);
+  const [settled, setSettled] = useState(true);
+  const selectRef = useRef(onSelect);
+  const settledRef = useRef(onFocusSettled);
+
+  useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
+  useEffect(() => { settledRef.current = onFocusSettled; }, [onFocusSettled]);
 
   useEffect(() => {
     focusRef.current = focus;
+    setSettled(false);
     renderRequestRef.current?.();
   }, [focus]);
 
@@ -38,9 +55,11 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-4, 4, 3.5, -3.5, 0.1, 60);
       camera.position.set(8.2, 6.8, 9.2);
-      const viewCenter = new THREE.Vector3(0, 0.88, 0);
-      const targetCenter = new THREE.Vector3();
-      camera.lookAt(viewCenter);
+      const basePosition = new THREE.Vector3(8.2, 6.8, 9.2);
+      const baseCenter = new THREE.Vector3(0, 0.88, 0);
+      camera.lookAt(baseCenter);
+      const baseQuaternion = camera.quaternion.clone();
+      const framingCamera = camera.clone();
       const objects = new THREE.Group();
       objects.rotation.y = -0.16;
       scene.add(objects);
@@ -154,10 +173,12 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
         ctx.beginPath(); ctx.arc(960, 526, 68, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(839, 526); ctx.lineTo(1081, 526); ctx.moveTo(960, 405); ctx.lineTo(960, 647); ctx.stroke();
       });
+      let laptopScreen: InstanceType<typeof THREE.Mesh> | undefined;
       if (screenTexture) {
         const screen = new THREE.Mesh(new THREE.PlaneGeometry(3.22, 2.02), new THREE.MeshBasicMaterial({ map: screenTexture }));
         screen.position.set(0, 1.21, 0.080);
         lid.add(screen);
+        laptopScreen = screen;
       }
       const webcam = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 12), dark);
       webcam.position.set(0, 2.31, 0.065);
@@ -246,6 +267,8 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
       let scrollProgress = 0;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       const loader = new THREE.TextureLoader();
+      const printGroups: InstanceType<typeof THREE.Group>[] = [];
+      let galleryImage: InstanceType<typeof THREE.Mesh> | undefined;
       function print(url: string, x: number, z: number, angle: number, elevation: number) {
         const group = new THREE.Group();
         group.position.set(x, elevation, z);
@@ -260,31 +283,112 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
         image.rotation.x = -Math.PI / 2;
         image.position.set(0, 0.027, -0.055);
         group.add(image);
+        printGroups.push(group);
+        galleryImage = image;
       }
-      print("/photos/thumbs/76fefc7c-7c0d-454d-8a6c-a3fb683cbf15.jpg", -0.03, 1.47, -0.08, 0.01);
-      print("/photos/thumbs/0cd9ca70-1ea6-41f1-b301-9c0f15c629ce.jpg", 0.04, 1.67, 0.13, 0.046);
+      print("/photos/76fefc7c-7c0d-454d-8a6c-a3fb683cbf15.jpg", -0.03, 1.47, -0.08, 0.01);
+      print("/photos/0cd9ca70-1ea6-41f1-b301-9c0f15c629ce.jpg", 0.04, 1.67, 0.13, 0.046);
 
-      function render() {
+      const transitionDuration = 1150;
+      let lastFocus: "desk" | SceneTarget = "desk";
+      let transitionStarted = 0;
+      let transitionActive = false;
+      let settledNotified = false;
+      let viewHeight = 6.45;
+      let viewAspect = 1.2;
+      const startPosition = camera.position.clone();
+      const startQuaternion = camera.quaternion.clone();
+      const destinationPosition = new THREE.Vector3();
+      const destinationQuaternion = camera.quaternion.clone();
+      let startZoom = camera.zoom;
+      const focusCenter = new THREE.Vector3();
+      const focusNormal = new THREE.Vector3();
+      const focusUp = new THREE.Vector3();
+      const worldQuaternion = new THREE.Quaternion();
+
+      function canonicalFocus(): "desk" | SceneTarget {
+        return focusRef.current === "camera" ? "gallery" : focusRef.current;
+      }
+
+      function closeupZoom(target: "desk" | SceneTarget) {
+        if (target === "desk") return 1;
+        if (target === "research") {
+          // Keep the whole screen readable, including a narrow phone viewport.
+          return Math.min(viewHeight * 0.94 / 2.02, viewHeight * viewAspect * 0.94 / 3.22);
+        }
+        // The last frame is a photograph, edge-to-edge, before the gallery opens.
+        return Math.max(viewHeight * 1.025 / 0.77, viewHeight * viewAspect * 1.025 / 1.16);
+      }
+
+      function updateDestination(target: "desk" | SceneTarget) {
+        if (target === "desk") {
+          destinationPosition.copy(basePosition);
+          destinationQuaternion.copy(baseQuaternion);
+          return;
+        }
+        scene.updateMatrixWorld(true);
+        const focalMesh = target === "research" ? laptopScreen : galleryImage;
+        if (!focalMesh) return;
+        focalMesh.getWorldPosition(focusCenter);
+        focalMesh.getWorldQuaternion(worldQuaternion);
+        focusNormal.set(0, 0, 1).applyQuaternion(worldQuaternion).normalize();
+        focusUp.set(0, 1, 0).applyQuaternion(worldQuaternion).normalize();
+        destinationPosition.copy(focusCenter).addScaledVector(focusNormal, 12);
+        framingCamera.position.copy(destinationPosition);
+        framingCamera.up.copy(focusUp);
+        framingCamera.lookAt(focusCenter);
+        destinationQuaternion.copy(framingCamera.quaternion);
+      }
+
+      function render(now = performance.now()) {
         frame = 0;
-        if (cancelled || !visible || document.hidden) return;
-        const focusView = focusRef.current;
-        const laptopFocus = focusView === "research";
-        const cameraFocus = focusView === "camera";
-        targetCenter.set(laptopFocus ? -0.4 : cameraFocus ? 0.7 : 0, laptopFocus ? 1.08 : cameraFocus ? 0.75 : 0.88, laptopFocus ? -0.4 : cameraFocus ? 0.65 : 0);
-        const targetZoom = laptopFocus ? 1.1 : cameraFocus ? 1.14 : 1;
-        const focusYaw = laptopFocus ? 0.14 : cameraFocus ? 0.26 : 0;
-        const nextY = -0.16 + focusYaw + (reducedMotion.matches ? 0 : pointerX * 0.08 + scrollProgress * 0.23);
-        const nextX = reducedMotion.matches ? 0 : pointerY * 0.025;
-        const easing = reducedMotion.matches ? 1 : 0.1;
-        objects.rotation.y += (nextY - objects.rotation.y) * easing;
-        objects.rotation.x += (nextX - objects.rotation.x) * easing;
-        viewCenter.lerp(targetCenter, easing);
-        camera.lookAt(viewCenter);
-        camera.zoom += (targetZoom - camera.zoom) * easing;
+        if (cancelled || !host || !visible || document.hidden) return;
+        const focusView = canonicalFocus();
+        if (focusView !== lastFocus) {
+          lastFocus = focusView;
+          startPosition.copy(camera.position);
+          startQuaternion.copy(camera.quaternion);
+          startZoom = camera.zoom;
+          transitionStarted = now;
+          transitionActive = true;
+          settledNotified = false;
+          host.style.cursor = "default";
+          updateDestination(focusView);
+        }
+
+        const rawProgress = transitionActive ? Math.min(1, (now - transitionStarted) / transitionDuration) : 1;
+        const progress = reducedMotion.matches ? 1 : rawProgress;
+        const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
+        const targetZoom = closeupZoom(focusView);
+        if (transitionActive) {
+          camera.position.lerpVectors(startPosition, destinationPosition, eased);
+          camera.quaternion.slerpQuaternions(startQuaternion, destinationQuaternion, eased);
+          camera.zoom = startZoom + (targetZoom - startZoom) * eased;
+          if (progress === 1) transitionActive = false;
+        } else {
+          // ResizeObserver can change the viewport during the parent FLIP animation.
+          camera.zoom = targetZoom;
+        }
+
+        let unsettled = 0;
+        if (focusView === "desk" && !transitionActive) {
+          const nextY = -0.16 + (reducedMotion.matches ? 0 : pointerX * 0.08 + scrollProgress * 0.23);
+          const nextX = reducedMotion.matches ? 0 : pointerY * 0.025;
+          const easing = reducedMotion.matches ? 1 : 0.1;
+          objects.rotation.y += (nextY - objects.rotation.y) * easing;
+          objects.rotation.x += (nextX - objects.rotation.x) * easing;
+          unsettled = Math.abs(nextY - objects.rotation.y) + Math.abs(nextX - objects.rotation.x);
+        }
         camera.updateProjectionMatrix();
+        camera.updateMatrixWorld();
         renderer.render(scene, camera);
-        const unsettled = Math.abs(nextY - objects.rotation.y) + Math.abs(nextX - objects.rotation.x) + Math.abs(targetZoom - camera.zoom) + viewCenter.distanceTo(targetCenter);
-        if (unsettled > 0.0003) requestRender();
+
+        if (!transitionActive && !settledNotified) {
+          settledNotified = true;
+          setSettled(true);
+          if (focusView !== "desk") settledRef.current?.(focusView);
+        }
+        if (transitionActive || unsettled > 0.0003) requestRender();
       }
       function requestRender() {
         if (!frame && visible && !document.hidden && !cancelled) frame = window.requestAnimationFrame(render);
@@ -294,24 +398,84 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
         const width = host.clientWidth;
         const height = host.clientHeight;
         if (!width || !height) return;
-        const aspect = width / height;
-        const viewHeight = aspect < 0.9 ? 7.5 : 6.45;
-        camera.left = -viewHeight * aspect / 2;
-        camera.right = viewHeight * aspect / 2;
+        viewAspect = width / height;
+        viewHeight = viewAspect < 0.9 ? 7.5 : 6.45;
+        camera.left = -viewHeight * viewAspect / 2;
+        camera.right = viewHeight * viewAspect / 2;
         camera.top = viewHeight / 2;
         camera.bottom = -viewHeight / 2;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height, false);
         requestRender();
       }
+      const raycaster = new THREE.Raycaster();
+      const hitPoint = new THREE.Vector2();
+      // A camera-facing picking surface gives the thin, flat print a usable
+      // touch area without enlarging the photograph or changing its close-up.
+      const photoHitTarget = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide }),
+      );
+      photoHitTarget.visible = false;
+      scene.add(photoHitTarget);
+      const coarsePointer = window.matchMedia("(pointer: coarse)");
+      const targets = new Map<InstanceType<typeof THREE.Object3D>, SceneTarget>([
+        [laptop, "research"], [cameraObject, "gallery"],
+        ...printGroups.map((group) => [group, "gallery"] as const),
+      ]);
+      const targetObjects = [...targets.keys()];
+      let pointerStart: { x: number; y: number; id: number; time: number } | null = null;
+      function pick(event: PointerEvent): SceneTarget | null {
+        if (!host || canonicalFocus() !== "desk" || !selectRef.current) return null;
+        const rect = host.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        hitPoint.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld();
+        raycaster.setFromCamera(hitPoint, camera);
+        if (galleryImage) {
+          galleryImage.getWorldPosition(photoHitTarget.position);
+          photoHitTarget.quaternion.copy(camera.quaternion);
+          const minimumPixels = coarsePointer.matches || event.pointerType === "touch" ? 72 : 64;
+          const side = viewHeight / camera.zoom * minimumPixels / rect.height;
+          photoHitTarget.scale.set(side, side, 1);
+          photoHitTarget.updateMatrixWorld(true);
+          // Prefer the print in its immediate vicinity; the generous laptop
+          // geometry remains clickable everywhere outside this small hotspot.
+          if (raycaster.intersectObject(photoHitTarget, false).length) return "gallery";
+        }
+        for (const hit of raycaster.intersectObjects(targetObjects, true)) {
+          let object: InstanceType<typeof THREE.Object3D> | null = hit.object;
+          while (object) {
+            const target = targets.get(object);
+            if (target) return target;
+            object = object.parent;
+          }
+        }
+        return null;
+      }
       function move(event: PointerEvent) {
-        if (reducedMotion.matches || event.pointerType === "touch" || !host) return;
+        if (!host || canonicalFocus() !== "desk") return;
+        if (event.pointerType !== "touch") host.style.cursor = pick(event) ? "pointer" : "default";
+        if (reducedMotion.matches || event.pointerType === "touch") return;
         const rect = host.getBoundingClientRect();
         pointerX = Math.max(-1, Math.min(1, (event.clientX - rect.left) / rect.width * 2 - 1));
         pointerY = Math.max(-1, Math.min(1, (event.clientY - rect.top) / rect.height * 2 - 1));
         requestRender();
       }
-      function leave() { pointerX = 0; pointerY = 0; requestRender(); }
+      function pointerDown(event: PointerEvent) {
+        if (event.button !== 0) return;
+        pointerStart = { x: event.clientX, y: event.clientY, id: event.pointerId, time: performance.now() };
+      }
+      function pointerUp(event: PointerEvent) {
+        const start = pointerStart;
+        pointerStart = null;
+        if (!start || start.id !== event.pointerId || performance.now() - start.time > 900 || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) return;
+        const selected = pick(event);
+        if (selected) selectRef.current?.(selected);
+      }
+      function pointerCancel() { pointerStart = null; }
+      function leave() { pointerX = 0; pointerY = 0; if (host) host.style.cursor = "default"; requestRender(); }
       function scroll() {
         if (!host || reducedMotion.matches) return;
         const top = host.getBoundingClientRect().top + window.scrollY;
@@ -332,6 +496,9 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
       }, { rootMargin: "80px" });
       observer.observe(host);
       host.addEventListener("pointermove", move, { passive: true });
+      host.addEventListener("pointerdown", pointerDown, { passive: true });
+      host.addEventListener("pointerup", pointerUp, { passive: true });
+      host.addEventListener("pointercancel", pointerCancel, { passive: true });
       host.addEventListener("pointerleave", leave, { passive: true });
       window.addEventListener("scroll", scroll, { passive: true });
       document.addEventListener("visibilitychange", visibility);
@@ -339,7 +506,8 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
       renderRequestRef.current = requestRender;
       resize();
       scroll();
-      renderer.render(scene, camera);
+      if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      render();
       setReady(true);
 
       teardown = () => {
@@ -348,6 +516,9 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
         resizeObserver.disconnect();
         observer.disconnect();
         host.removeEventListener("pointermove", move);
+        host.removeEventListener("pointerdown", pointerDown);
+        host.removeEventListener("pointerup", pointerUp);
+        host.removeEventListener("pointercancel", pointerCancel);
         host.removeEventListener("pointerleave", leave);
         window.removeEventListener("scroll", scroll);
         document.removeEventListener("visibilitychange", visibility);
@@ -379,7 +550,7 @@ export function DeskScene({ className = "", focus = "desk" }: { className?: stri
   }, []);
 
   return (
-    <div className={`paper-desk ${className}`.trim()} ref={hostRef} role="img" aria-label="A small workspace with a laptop, camera, field notebook and photographs" style={{ position: "relative", width: "100%", aspectRatio: "1.2" }}>
+    <div className={`paper-desk ${className}`.trim()} ref={hostRef} role="img" aria-label="A small workspace with a laptop, camera, field notebook and photographs" data-focus={focus === "camera" ? "gallery" : focus} data-ready={ready} data-settled={settled} style={{ position: "relative", width: "100%", height: immersive ? "100%" : undefined, aspectRatio: immersive ? undefined : "1.2" }}>
       <img src="/desk-scene-fallback.svg" alt="" aria-hidden="true" width="720" height="600" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", visibility: ready ? "hidden" : "visible" }} />
     </div>
   );

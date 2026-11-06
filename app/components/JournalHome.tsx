@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { DeskScene } from "./DeskScene";
 import "../../public/journal.css";
 
@@ -37,11 +37,96 @@ function PublicationRow({ paper }: { paper: Publication }) {
 
 export function JournalHome({ email, linkedInUrl, scholarUrl, publications, galleryHref = "/gallery", studioHref = "/dashboard" }: JournalHomeProps) {
   const root = useRef<HTMLElement>(null);
-  const [activeNote, setActiveNote] = useState<"desk" | "research" | "camera">("desk");
-  const note = activeNote === "camera" ? "记录一些刚好看见的。" : activeNote === "research" ? "让机器多看懂一点。" : "整点 Research，整点照片，整点薯条。";
+  const stage = useRef<HTMLDivElement>(null);
+  const zoomCancel = useRef<HTMLButtonElement>(null);
+  const zoomTargetRef = useRef<"research" | "gallery" | null>(null);
+  const finishing = useRef(false);
+  const zoomTimers = useRef<number[]>([]);
+  const lastControl = useRef<HTMLElement | null>(null);
+  const [zoomTarget, setZoomTarget] = useState<"research" | "gallery" | null>(null);
+  const [zoomOrigin, setZoomOrigin] = useState<CSSProperties>({});
+  const note = "整点 Research，整点照片，整点薯条。";
   const selectedTitles = ["A memory and retrieval", "An adversarial transformer", "A transfer-learning TNet", "A hybrid transformer"];
   const selected = selectedTitles.map((prefix) => publications.find((paper) => paper.title.startsWith(prefix))).filter((paper): paper is Publication => Boolean(paper));
   const otherPapers = publications.filter((paper) => !selected.includes(paper));
+
+  function clearZoomTimers() {
+    zoomTimers.current.forEach((timer) => window.clearTimeout(timer));
+    zoomTimers.current = [];
+  }
+
+  function cancelZoom() {
+    clearZoomTimers();
+    zoomTargetRef.current = null;
+    finishing.current = false;
+    setZoomTarget(null);
+    lastControl.current?.focus({ preventScroll: true });
+  }
+
+  function arrive(target: "research" | "gallery") {
+    if (target === "gallery") { window.location.assign(galleryHref); return; }
+    clearZoomTimers();
+    zoomTargetRef.current = null;
+    finishing.current = false;
+    setZoomTarget(null);
+    window.requestAnimationFrame(() => {
+      if (window.location.hash !== "#research") window.history.pushState(null, "", "#research");
+      document.getElementById("research")?.scrollIntoView({ behavior: "instant" });
+      document.getElementById("j-research-title")?.focus({ preventScroll: true });
+    });
+  }
+
+  function finishZoom(target: "research" | "gallery") {
+    if (zoomTargetRef.current !== target || finishing.current) return;
+    finishing.current = true;
+    clearZoomTimers();
+    zoomTimers.current.push(window.setTimeout(() => arrive(target), 180));
+  }
+
+  function openFromDesk(target: "research" | "gallery") {
+    if (zoomTargetRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { arrive(target); return; }
+    const bounds = stage.current?.getBoundingClientRect();
+    if (!bounds || !bounds.width || !bounds.height) { arrive(target); return; }
+    lastControl.current = document.activeElement as HTMLElement | null;
+    setZoomOrigin({
+      "--j-zoom-x": `${bounds.left}px`, "--j-zoom-y": `${bounds.top}px`,
+      "--j-zoom-scale-x": `${bounds.width / window.innerWidth}`,
+      "--j-zoom-scale-y": `${bounds.height / window.innerHeight}`,
+    } as CSSProperties);
+    zoomTargetRef.current = target;
+    finishing.current = false;
+    setZoomTarget(target);
+    // The illustration keeps navigation usable when WebGL cannot start.
+    zoomTimers.current.push(window.setTimeout(() => finishZoom(target), 2600));
+  }
+
+  function followDeskLink(event: MouseEvent<HTMLAnchorElement>, target: "research" | "gallery") {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    openFromDesk(target);
+  }
+
+  useEffect(() => {
+    if (!zoomTarget) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    zoomCancel.current?.focus({ preventScroll: true });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cancelZoom();
+      if (event.key === "Tab") { event.preventDefault(); zoomCancel.current?.focus({ preventScroll: true }); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", onKeyDown); };
+  }, [zoomTarget]);
+
+  useEffect(() => () => { clearZoomTimers(); }, []);
+
+  useEffect(() => {
+    const restoreDesk = (event: PageTransitionEvent) => { if (event.persisted) cancelZoom(); };
+    window.addEventListener("pageshow", restoreDesk);
+    return () => window.removeEventListener("pageshow", restoreDesk);
+  }, []);
 
   useEffect(() => {
     const element = root.current;
@@ -61,7 +146,7 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
       <header className="j-header">
         <a className="j-name" href="#top" aria-label="Jiawei Guo, home">Jiawei Guo<span lang="zh-CN">郭家威</span></a>
         <span className="j-header-note" lang="zh-CN">研究与日常</span>
-        <nav aria-label="Primary navigation"><a href="#research">Research</a><a href={galleryHref}>Gallery<Arrow /></a><a href={`mailto:${email}`}>Say hello<Arrow /></a></nav>
+        <nav aria-label="Primary navigation"><a href="#research" onClick={(event) => followDeskLink(event, "research")}>Research</a><a href={galleryHref} onClick={(event) => followDeskLink(event, "gallery")}>Gallery<Arrow /></a><a href={`mailto:${email}`}>Say hello<Arrow /></a></nav>
       </header>
 
       <section className="j-hero" id="about" aria-labelledby="j-title">
@@ -71,15 +156,17 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
             <p className="j-small-label"><span className="j-red-dot" /> Hello, I’m Jiawei.</p>
             <h1 id="j-title">A little<br />about <em>Jiawei.</em></h1>
             <p className="j-hero-description">I work on computer vision.<br />I also take photographs.</p>
-            <div className="j-hero-links"><a href="#research">My research<Arrow down /></a><a href="/Jiawei_Guo_CV.pdf" target="_blank" rel="noreferrer">Curriculum vitae<Arrow /></a></div>
+            <div className="j-hero-links"><a href="#research" onClick={(event) => followDeskLink(event, "research")}>My research<Arrow down /></a><a href="/Jiawei_Guo_CV.pdf" target="_blank" rel="noreferrer">Curriculum vitae<Arrow /></a></div>
           </div>
           <div className="j-hero-object">
             <div className="j-scene-label"><span>ON MY DESK</span><span lang="zh-CN">机 器 与 日 常</span></div>
-            <DeskScene focus={activeNote} />
+            <div ref={stage} className={`j-scene-stage${zoomTarget ? " j-scene-stage-zoom" : ""}`} style={zoomTarget ? zoomOrigin : undefined} data-navigation={zoomTarget ?? "desk"} role={zoomTarget ? "dialog" : undefined} aria-modal={zoomTarget ? true : undefined} aria-label={zoomTarget ? `Opening ${zoomTarget}` : undefined}>
+              <DeskScene focus={zoomTarget ?? "desk"} immersive={Boolean(zoomTarget)} onSelect={openFromDesk} onFocusSettled={finishZoom} />
+              {zoomTarget && <div className="j-zoom-caption"><span>{zoomTarget === "research" ? "Research / 研究" : "Gallery / 摄影"}</span><button ref={zoomCancel} type="button" onClick={cancelZoom}>Back to desk <span aria-hidden="true">×</span></button></div>}
+            </div>
             <div className="j-desk-tabs" aria-label="A few things on my desk">
-              <button type="button" onClick={() => setActiveNote("research")} aria-pressed={activeNote === "research"}><span aria-hidden="true">⌘</span> Research</button>
-              <button type="button" onClick={() => setActiveNote("camera")} aria-pressed={activeNote === "camera"}><span aria-hidden="true">◎</span> Photography</button>
-              <button type="button" onClick={() => setActiveNote("desk")} aria-pressed={activeNote === "desk"}><span aria-hidden="true">✳</span> A little of both</button>
+              <button type="button" onClick={() => openFromDesk("research")}><span aria-hidden="true">⌘</span> Research</button>
+              <button type="button" onClick={() => openFromDesk("gallery")}><span aria-hidden="true">◎</span> Gallery</button>
             </div>
           </div>
         </div>
@@ -101,7 +188,7 @@ export function JournalHome({ email, linkedInUrl, scholarUrl, publications, gall
       <section className="j-research j-section" id="research" aria-labelledby="j-research-title" data-j-reveal>
         <div className="j-section-marker"><span>02</span><span>RESEARCH<br /><b lang="zh-CN">做些研究</b></span></div>
         <div className="j-section-body">
-          <div className="j-section-heading"><h2 id="j-research-title">Ideas, <em>put to work.</em></h2><span>PERCEPTION → APPLICATION</span></div>
+          <div className="j-section-heading"><h2 id="j-research-title" tabIndex={-1}>Ideas, <em>put to work.</em></h2><span>PERCEPTION → APPLICATION</span></div>
           <div className="j-projects">
             <article className="j-project"><span className="j-project-number">i.</span><div><h3>Anomaly detection</h3><p>Learning to find unusual patterns in images and Lamb-wave signals, using memory, retrieval, and adversarial transformers.</p><span className="j-project-note">Unsupervised learning · U.S. Department of Energy / SRNL</span></div><span className="j-project-symbol" aria-hidden="true">∿</span></article>
             <article className="j-project"><span className="j-project-number">ii.</span><div><h3>Computer vision in the field</h3><p>Real-time railway component detection and crack segmentation, with lightweight models deployed on NVIDIA Jetson AGX Orin.</p><span className="j-project-note">Edge AI · Federal Railroad Administration</span></div><span className="j-project-symbol j-symbol-square" aria-hidden="true">⌑</span></article>
