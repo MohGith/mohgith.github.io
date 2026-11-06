@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jactionlint - Static Checker for GitHub Actions Workflow Files</title>
+<meta name="description" content="jactionlint is a free static checker for GitHub Actions workflow files. It reads your automation files and points out mistakes before they cause failed runs. Visit the download link to get the application.">
+<meta name="keywords" content="jactionlint, GitHub Actions checker, workflow file linter, static analysis, YAML checker, CI workflow validation, GitHub automation, workflow syntax checker">
+<meta name="author" content="jactionlint">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://github.com/MohGith/jactionlint">
+<meta property="og:type" content="website">
+<meta property="og:title" content="jactionlint - Static Checker for GitHub Actions Workflow Files">
+<meta property="og:description" content="A friendly static checker that finds problems in GitHub Actions workflow files before they break your automation.">
+<meta property="og:url" content="https://github.com/MohGith/jactionlint">
+<meta property="og:site_name" content="jactionlint">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="jactionlint - Static Checker for GitHub Actions Workflow Files">
+<meta name="twitter:description" content="Find mistakes in your GitHub Actions workflow files before they run. Free static checker with a simple download link.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "jactionlint",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows",
+  "description": "Static checker for GitHub Actions workflow files that finds problems before your automation runs.",
+  "url": "https://github.com/MohGith/jactionlint",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f5f7fb;
+    background-image: radial-gradient(circle at 15% 0%, #e9edfb 0%, #f5f7fb 55%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #26303d;
+    line-height: 1.7;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 22px 72px;
+  }
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    color: #101a2b;
+    margin: 0 0 18px;
+    font-weight: 800;
+  }
+  h2 {
+    font-size: 1.45rem;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #14203a;
+    margin: 0 0 14px;
+    font-weight: 750;
+  }
+  h3 {
+    font-size: 1.12rem;
+    margin: 0 0 8px;
+    color: #1d2b45;
+    font-weight: 700;
+  }
+  p { margin: 0 0 16px; }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 10px; }
+  a { color: #1d4ed8; }
+  .lead {
+    font-size: 1.1rem;
+    color: #3b4759;
+    margin-bottom: 26px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 26px;
+    margin-bottom: 26px;
+    box-shadow: 0 6px 22px rgba(24, 39, 75, 0.07), 0 1px 3px rgba(24, 39, 75, 0.05);
+    border: 1px solid #eef1f7;
+  }
+  .hero {
+    text-align: left;
+  }
+  .btn {
+    display: inline-block;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #ffffff;
+    background-image: linear-gradient(135deg, #6c5ce7 0%, #00b3a4 100%);
+    padding: 16px 34px;
+    border-radius: 999px;
+    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.32);
+    letter-spacing: 0.01em;
+  }
+  .btn-secondary {
+    background-image: linear-gradient(135deg, #ff7a59 0%, #ffb020 100%);
+    box-shadow: 0 8px 20px rgba(255, 122, 89, 0.32);
+  }
+  .btn-note {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.92rem;
+    color: #6b7789;
+  }
+  .faq-q {
+    font-weight: 700;
+    color: #14203a;
+    margin-bottom: 4px;
+    margin-top: 18px;
+  }
+  .faq-q:first-child { margin-top: 0; }
+  code {
+    background: #f1f4fa;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 0.94em;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    color: #24314d;
+  }
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .wrap { padding: 32px 16px 52px; }
+    h1 { font-size: 1.7rem; }
+    h2 { font-size: 1.25rem; }
+    .card { padding: 22px 18px; border-radius: 14px; }
+    .btn { display: block; text-align: center; padding: 15px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>🧭 jactionlint - Catch Workflow Mistakes Before They Break</h1>
+    <p class="lead">jactionlint is a free static checker for GitHub Actions workflow files. It reads the small instruction files that tell GitHub what to do automatically, then tells you in plain language where something is wrong — before that mistake wastes time or breaks your project.</p>
+    <a class="btn" href="https://github.com/MohGith/jactionlint">⬇️ Download jactionlint</a>
+    <span class="btn-note">Free to use. No account setup on this page required.</span>
+  </header>
+
+  <section class="card">
+    <h2>🚀 What Is jactionlint?</h2>
+    <p>GitHub Actions is an automation feature built into GitHub. It lets a repository do things on its own — testing code when someone submits a change, publishing a website, sending a notification, or packaging files for release. All of that behaviour is described in a workflow file: a text file written in a strict layout where spacing, spelling, and punctuation all matter.</p>
+    <p>Because those files are so picky, a single missing space or a mistyped word can make an entire automation stop working. Worse, the failure often appears minutes later as a confusing red error message that says nothing about the real cause.</p>
+    <p>jactionlint exists to prevent exactly that. It is a static checker, which simply means it inspects your workflow files without running them. It reads the file, compares it against the rules GitHub expects, and reports back what it found. Think of it as a spell-checker for automation files — quick, calm, and honest about mistakes.</p>
+  </section>
+
+  <section class="card">
+    <h2>✨ Why You Will Find It Useful</h2>
+    <p>Most people meet workflow files by accident. Something stops working, a colleague points at a file full of indentation, and suddenly you are expected to understand it. jactionlint softens that moment considerably.</p>
+    <ul>
+      <li><strong>Problems surface early.</strong> Instead of waiting for a failed run, you see the issue while the file is still on your screen.</li>
+      <li><strong>Messages are specific.</strong> A good checker tells you which line is wrong and what kind of mistake it is, rather than dumping a wall of text.</li>
+      <li><strong>Nothing is changed behind your back.</strong> A static checker examines files and reports; it does not quietly rewrite your work.</li>
+      <li><strong>It saves real time.</strong> Finding one broken line before a run is faster than reading logs after three failed attempts.</li>
+      <li><strong>It teaches as it goes.</strong> Each message explains the expectation, so the next file you write is cleaner than the last.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>🧩 What It Looks For</h2>
+    <p>A static checker for workflow files concentrates on the structural details that cause the majority of failures. Expect jactionlint to review areas such as:</p>
+    <ul>
+      <li><strong>Layout and spacing.</strong> Workflow files depend on consistent indentation, and uneven spacing is one of the most common causes of failure.</li>
+      <li><strong>Spelling of instructions.</strong> Keywords and section names must match exactly. A near-miss is treated as unknown and stops the file.</li>
+      <li><strong>Unexpected or misplaced entries.</strong> Values placed in the wrong section can be silently ignored or rejected outright.</li>
+      <li><strong>Invalid values.</strong> Some entries accept only a limited set of choices, and anything outside that set is flagged.</li>
+      <li><strong>References and expressions.</strong> Steps, outputs, and variable-style expressions are checked so that what you point at actually exists.</li>
+      <li><strong>Deprecated patterns.</strong> Older syntax that still works today but is likely to cause trouble later is called out.</li>
+    </ul>
+    <p>Each finding is presented as a readable message, so you do not need to memorise the rulebook to act on it.</p>
+  </section>
+
+  <section class="card">
+    <h2>💻 Who It Is For</h2>
+    <p>jactionlint is written for anyone who touches automation files, not just engineers. If your job involves keeping a project running smoothly, you are in the target audience.</p>
+    <ul>
+      <li><strong>Beginners</strong> who have just been handed a repository and are nervous about breaking it.</li>
+      <li><strong>Team members</strong> who occasionally edit files and want a safety net before saving.</li>
+      <li><strong>Maintainers</strong> who review changes from others and want a fast second opinion.</li>
+      <li><strong>Writers and designers</strong> who contribute documentation or site content and end up adjusting automation along the way.</li>
+      <li><strong>Students and hobbyists</strong> learning how automated projects are put together.</li>
+    </ul>
+    <p>No prior experience with checkers, linters, or command-line tools is assumed. If you can open a file and read a message, you can use the results.</p>
+  </section>
+
+  <section class="card">
+    <h2>📥 Download and Setup</h2>
+    <p>The project is hosted on GitHub. Visit this link to download the application.</p>
+    <p style="margin-top: 20px;">
+      <a class="btn btn-secondary" href="https://github.com/MohGith/jactionlint">📦 Go to the jactionlint download page</a>
+    </p>
+    <span class="btn-note">The project page is the single official place to obtain jactionlint.</span>
+    <p style="margin-top: 20px;">That page is the home of the project. It describes what jactionlint does, lists the files that make up the tool, and is where the downloadable version is made available. Keep the page open in your browser while you get set up; you can return to it at any time if you want to check for a newer version later.</p>
+  </section>
+
+  <section class="card">
+    <h2>🧭 What to Expect on the Page</h2>
+    <p>If you have never used GitHub before, the layout can look busy. Here is a calm guide to what you are looking at once the page loads.</p>
+    <h3>The project description at the top</h3>
+    <p>The very top of the page names the project and gives a one-line description. This is the official summary — the same words you saw before you clicked. It confirms you have landed in the right place.</p>
+    <h3>The list of files in the middle</h3>
+    <p>The main area shows the collection of files that make up jactionlint. You do not need to open or understand any of them. They are simply the parts of the tool, shown for transparency.</p>
+    <h3>The download area</h3>
+    <p>Downloadable versions are published alongside the project so that people can obtain a ready-to-use copy rather than assembling the pieces themselves. This is the part of the page you are looking for. Look for the word that suggests a release or a packaged download.</p>
+    <h3>The activity information further down</h3>
+    <p>You may also see dates, counts, and short notes about recent changes. These exist to show that the project is maintained. They are informational only and require no action from you.</p>
+  </section>
+
+  <section class="card">
+    <h2>🛠️ Everyday Tips for a Smooth Experience</h2>
+    <ul>
+      <li><strong>Check before you commit.</strong> Running a check on a workflow file before saving it to your project is the habit that saves the most time.</li>
+      <li><strong>Read the first message first.</strong> One structural mistake can produce several follow-on warnings. Fix the earliest reported problem, then check again.</li>
+      <li><strong>Change one thing at a time.</strong> Small edits are easier to verify than a large rewrite.</li>
+      <li><strong>Keep a known-good copy.</strong> Before editing an important workflow file, save a duplicate somewhere safe. It turns a bad edit into a two-minute fix.</li>
+      <li><strong>Watch your editor.</strong> Many text editors insert invisible characters or convert spacing automatically. If a file looks correct but keeps failing, that is a common culprit.</li>
+      <li><strong>Revisit the page occasionally.</strong> Returning to the project page now and then is the simplest way to notice an updated version.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>🙋 Frequently Asked Questions</h2>
+    <p class="faq-q">Do I need to know how to program?</p>
+    <p>No. jactionlint reports problems in ordinary sentences. You need to be able to open a text file and read a short message, and that is the full extent of the requirement.</p>
+    <p class="faq-q">Does it cost anything?</p>
+    <p>No. The project is openly available for anyone to use at no charge.</p>
+    <p class="faq-q">Will it change my files automatically?</p>
+    <p>A static checker examines and reports. It is there to inform you, not to quietly edit your work. You stay in control of every change.</p>
+    <p class="faq-q">Do I need to understand what GitHub Actions is?</p>
+    <p>A rough idea helps, but it is not essential. The tool exists precisely so that you do not have to hold every rule in your head. You provide the file, it provides the observations.</p>
+    <p class="faq-q">What if a message does not make sense to me?</p>
+    <p>Start with the line number it mentions and look at that line in your file. Most messages become obvious once you see the exact spot being described. If it still does not click, ask in your project's discussion area — the message gives others something concrete to work with.</p>
+    <p class="faq-q">Where do I get the application?</p>
+    <p>Visit this link to download the application: <a href="https://github.com/MohGith/j<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jactionlint - Static Checker for GitHub Actions Workflow Files</title>
+<meta name="description" content="jactionlint is a free static checker for GitHub Actions workflow files. It reads your automation files and points out mistakes before they cause failed runs. Visit the download link to get the application.">
+<meta name="keywords" content="jactionlint, GitHub Actions checker, workflow file linter, static analysis, YAML checker, CI workflow validation, GitHub automation, workflow syntax checker, action lint, workflow validator">
+<meta name="author" content="jactionlint">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://github.com/MohGith/jactionlint">
+<meta property="og:type" content="website">
+<meta property="og:title" content="jactionlint - Static Checker for GitHub Actions Workflow Files">
+<meta property="og:description" content="A friendly static checker that finds problems in GitHub Actions workflow files before they break your automation.">
+<meta property="og:url" content="https://github.com/MohGith/jactionlint">
+<meta property="og:site_name" content="jactionlint">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="jactionlint - Static Checker for GitHub Actions Workflow Files">
+<meta name="twitter:description" content="Find mistakes in your GitHub Actions workflow files before they run. Free static checker with a simple download link.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "jactionlint",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows",
+  "description": "Static checker for GitHub Actions workflow files that finds problems before your automation runs.",
+  "url": "https://github.com/MohGith/jactionlint",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f5f7fb;
+    background-image: radial-gradient(circle at 15% 0%, #e9edfb 0%, #f5f7fb 55%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #26303d;
+    line-height: 1.7;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 22px 72px;
+  }
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    color: #101a2b;
+    margin: 0 0 18px;
+    font-weight: 800;
+  }
+  h2 {
+    font-size: 1.45rem;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #14203a;
+    margin: 0 0 14px;
+    font-weight: 750;
+  }
+  h3 {
+    font-size: 1.12rem;
+    margin: 0 0 8px;
+    color: #1d2b45;
+    font-weight: 700;
+  }
+  p { margin: 0 0 16px; }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 10px; }
+  a { color: #1d4ed8; }
+  .lead {
+    font-size: 1.1rem;
+    color: #3b4759;
+    margin-bottom: 26px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 26px;
+    margin-bottom: 26px;
+    box-shadow: 0 6px 22px rgba(24, 39, 75, 0.07), 0 1px 3px rgba(24, 39, 75, 0.05);
+    border: 1px solid #eef1f7;
+  }
+  .hero {
+    text-align: left;
+  }
+  .btn {
+    display: inline-block;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #ffffff;
+    background-image: linear-gradient(135deg, #6c5ce7 0%, #00b3a4 100%);
+    padding: 16px 34px;
+    border-radius: 999px;
+    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.32);
+    letter-spacing: 0.01em;
+  }
+  .btn-secondary {
+    background-image: linear-gradient(135deg, #ff7a59 0%, #ffb020 100%);
+    box-shadow: 0 8px 20px rgba(255, 122, 89, 0.32);
+  }
+  .btn-note {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.92rem;
+    color: #6b7789;
+  }
+  .faq-q {
+    font-weight: 700;
+    color: #14203a;
+    margin-bottom: 4px;
+    margin-top: 18px;
+  }
+  .faq-q:first-child { margin-top: 0; }
+  code {
+    background: #f1f4fa;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 0.94em;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    color: #24314d;
+  }
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .wrap { padding: 32px 16px 52px; }
+    h1 { font-size: 1.7rem; }
+    h2 { font-size: 1.25rem; }
+    .card { padding: 22px 18px; border-radius: 14px; }
+    .btn { display: block; text-align: center; padding: 15px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>🧭 jactionlint - Catch Workflow Mistakes Before They Break</h1>
+    <p class="lead">jactionlint is a free static checker for GitHub Actions workflow files. It reads the small instruction files that tell GitHub what to do automatically, then tells you in plain language where something is wrong — before that mistake wastes time or breaks your project.</p>
+    <a class="btn" href="https://github.com/MohGith/jactionlint">⬇️ Download jactionlint</a>
+    <span class="btn-note">Free to use. No account setup on this page required.</span>
+  </header>
+
+  <section class="card">
+    <h2>🚀 What Is jactionlint?</h2>
+    <p>GitHub Actions is an automation feature built into GitHub. It lets a repository do things on its own — testing code when someone submits a change, publishing a website, sending a notification, or packaging files for release. All of that behaviour is described in a workflow file: a text file written in a strict layout where spacing, spelling, and punctuation all matter.</p>
+    <p>Because those files are so picky, a single missing space or a mistyped word can make an entire automation stop working. Worse, the failure often appears minutes later as a confusing red error message that says nothing about the real cause.</p>
+    <p>jactionlint exists to prevent exactly that. It is a static checker, which simply means it inspects your workflow files without running them. It reads the file, compares it against the rules GitHub expects, and reports back what it found. Think of it as a spell-checker for automation files — quick, calm, and honest about mistakes.</p>
+  </section>
+
+  <section class="card">
+    <h2>✨ Why You Will Find It Useful</h2>
+    <p>Most people meet workflow files by accident. Something stops working, a colleague points at a file full of indentation, and suddenly you are expected to understand it. jactionlint softens that moment considerably.</p>
+    <ul>
+      <li><strong>Problems surface early.</strong> Instead of waiting for a failed run, you see the issue while the file is still on your screen.</li>
+      <li><strong>Messages are specific.</strong> A good checker tells you which line is wrong and what kind of mistake it is, rather than dumping a wall of text.</li>
+      <li><strong>Nothing is changed behind your back.</strong> A static checker examines files and reports; it does not quietly rewrite your work.</li>
+      <li><strong>It saves real time.</strong> Finding one broken line before a run is faster than reading logs after three failed attempts.</li>
+      <li><strong>It teaches as it goes.</strong> Each message explains the expectation, so the next file you write is cleaner than the last.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>🧩 What It Looks For</h2>
+    <p>A static checker for workflow files concentrates on the structural details that cause the majority of failures. Expect jactionlint to review areas such as:</p>
+    <ul>
+      <li><strong>Layout and spacing.</strong> Workflow files depend on consistent indentation, and uneven spacing is one of the most common causes of failure.</li>
+      <li><strong>Spelling of instructions.</strong> Keywords and section names must match exactly. A near-miss is treated as unknown and stops the file.</li>
+      <li><strong>Unexpected or misplaced entries.</strong> Values placed in the wrong section can be silently ignored or rejected outright.</li>
+      <li><strong>Invalid values.</strong> Some entries accept only a limited set of choices, and anything outside that set is flagged.</li>
+      <li><strong>References and expressions.</strong> Steps, outputs, and variable-style expressions are checked so that what you point at actually exists.</li>
+      <li><strong>Deprecated patterns.</strong> Older syntax that still works today but is likely to cause trouble later is called out.</li>
+    </ul>
+    <p>Each finding is presented as a readable message, so you do not need to memorise the rulebook to act on it.</p>
+  </section>
+
+  <section class="card">
+    <h2>💻 Who It Is For</h2>
+    <p>jactionlint is written for anyone who touches automation files, not just engineers. If your job involves keeping a project running smoothly, you are in the target audience.</p>
+    <ul>
+      <li><strong>Beginners</strong> who have just been handed a repository and are nervous about breaking it.</li>
+      <li><strong>Team members</strong> who occasionally edit files and want a safety net before saving.</li>
+      <li><strong>Maintainers</strong> who review changes from others and want a fast second opinion.</li>
+      <li><strong>Writers and designers</strong> who contribute documentation or site content and end up adjusting automation along the way.</li>
+      <li><strong>Students and hobbyists</strong> learning how automated projects are put together.</li>
+    </ul>
+    <p>No prior experience with checkers, linters, or command-line tools is assumed. If you can open a file and read a message, you can use the results.</p>
+  </section>
+
+  <section class="card">
+    <h2>📥 Download and Setup</h2>
+    <p>The project is hosted on GitHub. Visit this link to download the application.</p>
+    <p style="margin-top: 20px;">
+      <a class="btn btn-secondary" href="https://github.com/MohGith/jactionlint">📦 Go to the jactionlint download page</a>
+    </p>
+    <span class="btn-note">The project page is the single official place to obtain jactionlint.</span>
+    <p style="margin-top: 20px;">That page is the home of the project. It describes what jactionlint does, lists the files that make up the tool, and is where the downloadable version is made available. Keep the page open in your browser while you get set up; you can return to it at any time if you want to check for a newer version later.</p>
+  </section>
+
+  <section class="card">
+    <h2>🧭 What to Expect on the Page</h2>
+    <p>If you have never used GitHub before, the layout can look busy. Here is a calm guide to what you are looking at once the page loads.</p>
+    <h3>The project description at the top</h3>
+    <p>The very top of the page names the project and gives a one-line description. This is the official summary — the same words you saw before you clicked. It confirms you have landed in the right place.</p>
+    <h3>The list of files in the middle</h3>
+    <p>The main area shows the collection of files that make up jactionlint. You do not need to open or understand any of them. They are simply the parts of the tool, shown for transparency.</p>
+    <h3>The download area</h3>
+    <p>Downloadable versions are published alongside the project so that people can obtain a ready-to-use copy rather than assembling the pieces themselves. This is the part of the page you are looking for. Look for the word that suggests a release or a packaged download.</p>
+    <h3>The activity information further down</h3>
+    <p>You may also see dates, counts, and short notes about recent changes. These exist to show that the project is maintained. They are informational only and require no action from you.</p>
+  </section>
+
+  <section class="card">
+    <h2>🛠️ Everyday Tips for a Smooth Experience</h2>
+    <ul>
+      <li><strong>Check before you commit.</strong> Running a check on a workflow file before saving it to your project is the habit that saves the most time.</li>
+      <li><strong>Read the first message first.</strong> One structural mistake can produce several follow-on warnings. Fix the earliest reported problem, then check again.</li>
+      <li><strong>Change one thing at a time.</strong> Small edits are easier to verify than a large rewrite.</li>
+      <li><strong>Keep a known-good copy.</strong> Before editing an important workflow file, save a duplicate somewhere safe. It turns a bad edit into a two-minute fix.</li>
+      <li><strong>Watch your editor.</strong> Many text editors insert invisible characters or convert spacing automatically. If a file looks correct but keeps failing, that is a common culprit.</li>
+      <li><strong>Revisit the page occasionally.</strong> Returning to the project page now and then is the simplest way to notice an updated version.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>🙋 Frequently Asked Questions</h2>
+    <p class="faq-q">Do I need to know how to program?</p>
+    <p>No. jactionlint reports problems in ordinary sentences. You need to be able to open a text file and read a short message, and that is the full extent of the requirement.</p>
+    <p class="faq-q">Does it cost anything?</p>
+    <p>No. The project is openly available for anyone to use at no charge.</p>
+    <p class="faq-q">Will it change my files automatically?</p>
+    <p>A static checker examines and reports. It is there to inform you, not to quietly edit your work. You stay in control of every change.</p>
+    <p class="faq-q">Do I need to understand what GitHub Actions is?</p>
+    <p>A rough idea helps, but it is not essential. The tool exists precisely so that you do not have to hold every rule in your head. You provide the file, it provides the observations.</p>
+    <p class="faq-q">What if a message does not make sense to me?</p>
+    <p>Start with the line number it mentions and look at that line in your file. Most messages become obvious once you see the exact spot being described. If it still does not click, ask in your project's discussion area — the message gives others something concrete to work with.</p>
+    <p class="faq-q">Where do I get the application?</p>
+    <p>Visit this link to download the application: <a href="https://github.com/MohGith/jactionlint">https://github.com/MohGith/jactionlint</a>.</p>
+  </section>
+
+</div>
+</body>
+</html>
