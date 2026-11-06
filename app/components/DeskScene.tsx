@@ -4,16 +4,18 @@ import { useEffect, useRef, useState } from "react";
 
 type SceneTarget = "research" | "gallery";
 type SceneFocus = "desk" | "camera" | SceneTarget;
+export type ScreenBounds = { left: number; top: number; width: number; height: number };
 type DeskSceneProps = {
   className?: string;
   focus?: SceneFocus;
   immersive?: boolean;
   onSelect?: (target: SceneTarget) => void;
   onFocusSettled?: (target: SceneTarget) => void;
+  onScreenBounds?: (bounds: ScreenBounds | null) => void;
 };
 
 /** A physical workspace that becomes a close-up when a destination is selected. */
-export function DeskScene({ className = "", focus = "desk", immersive = false, onSelect, onFocusSettled }: DeskSceneProps) {
+export function DeskScene({ className = "", focus = "desk", immersive = false, onSelect, onFocusSettled, onScreenBounds }: DeskSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef(focus);
   const renderRequestRef = useRef<(() => void) | null>(null);
@@ -21,13 +23,16 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
   const [settled, setSettled] = useState(true);
   const selectRef = useRef(onSelect);
   const settledRef = useRef(onFocusSettled);
+  const screenBoundsRef = useRef(onScreenBounds);
 
   useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
   useEffect(() => { settledRef.current = onFocusSettled; }, [onFocusSettled]);
+  useEffect(() => { screenBoundsRef.current = onScreenBounds; }, [onScreenBounds]);
 
   useEffect(() => {
     focusRef.current = focus;
     setSettled(false);
+    if (focus !== "research") screenBoundsRef.current?.(null);
     renderRequestRef.current?.();
   }, [focus]);
 
@@ -294,17 +299,48 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
       let transitionStarted = 0;
       let transitionActive = false;
       let settledNotified = false;
-      let viewHeight = 6.45;
+      let viewHeight = 6.8;
       let viewAspect = 1.2;
       const startPosition = camera.position.clone();
       const startQuaternion = camera.quaternion.clone();
       const destinationPosition = new THREE.Vector3();
       const destinationQuaternion = camera.quaternion.clone();
       let startZoom = camera.zoom;
+      let startLidScale = lid.scale.y;
       const focusCenter = new THREE.Vector3();
       const focusNormal = new THREE.Vector3();
       const focusUp = new THREE.Vector3();
       const worldQuaternion = new THREE.Quaternion();
+      let reportedScreenBounds: ScreenBounds | null = null;
+      const screenCorners = [
+        new THREE.Vector3(-1.61, -1.01, 0), new THREE.Vector3(1.61, -1.01, 0),
+        new THREE.Vector3(1.61, 1.01, 0), new THREE.Vector3(-1.61, 1.01, 0),
+      ];
+      const projectedCorner = new THREE.Vector3();
+
+      function reportScreenBounds(target: "desk" | SceneTarget) {
+        if (target !== "research" || transitionActive || !laptopScreen || !host) {
+          if (reportedScreenBounds) { reportedScreenBounds = null; screenBoundsRef.current?.(null); }
+          return;
+        }
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const corner of screenCorners) {
+          projectedCorner.copy(corner).applyMatrix4(laptopScreen.matrixWorld).project(camera);
+          minX = Math.min(minX, projectedCorner.x); maxX = Math.max(maxX, projectedCorner.x);
+          minY = Math.min(minY, projectedCorner.y); maxY = Math.max(maxY, projectedCorner.y);
+        }
+        const width = host.clientWidth, height = host.clientHeight;
+        const bounds = {
+          left: (minX + 1) * width / 2,
+          top: (1 - maxY) * height / 2,
+          width: (maxX - minX) * width / 2,
+          height: (maxY - minY) * height / 2,
+        };
+        if (!reportedScreenBounds || (Object.keys(bounds) as Array<keyof ScreenBounds>).some((key) => Math.abs(bounds[key] - reportedScreenBounds![key]) > 0.5)) {
+          reportedScreenBounds = bounds;
+          screenBoundsRef.current?.(bounds);
+        }
+      }
 
       function canonicalFocus(): "desk" | SceneTarget {
         return focusRef.current === "camera" ? "gallery" : focusRef.current;
@@ -313,11 +349,19 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
       function closeupZoom(target: "desk" | SceneTarget) {
         if (target === "desk") return 1;
         if (target === "research") {
-          // Keep the whole screen readable, including a narrow phone viewport.
-          return Math.min(viewHeight * 0.94 / 2.02, viewHeight * viewAspect * 0.94 / 3.22);
+          // Leave the physical bezel and a little breathing room around the
+          // actual screen; the HTML research interface is projected into it.
+          return Math.min(viewHeight * 0.72 / (2.02 * lid.scale.y), viewHeight * viewAspect * 0.83 / 3.22);
         }
         // The last frame is a photograph, edge-to-edge, before the gallery opens.
         return Math.max(viewHeight * 1.025 / 0.77, viewHeight * viewAspect * 1.025 / 1.16);
+      }
+
+      function researchLidScale(target: "desk" | SceneTarget) {
+        if (target !== "research" || viewAspect >= 1.2) return 1;
+        // A responsive physical monitor: its lid becomes portrait-shaped on a
+        // phone, so the interface can remain legible inside the actual bezel.
+        return Math.min(3.2, Math.max(1, (3.22 / 2.02) / (viewAspect * 0.83 / 0.72)));
       }
 
       function updateDestination(target: "desk" | SceneTarget) {
@@ -349,6 +393,7 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
           startPosition.copy(camera.position);
           startQuaternion.copy(camera.quaternion);
           startZoom = camera.zoom;
+          startLidScale = lid.scale.y;
           transitionStarted = now;
           transitionActive = true;
           settledNotified = false;
@@ -359,6 +404,11 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         const rawProgress = transitionActive ? Math.min(1, (now - transitionStarted) / transitionDuration) : 1;
         const progress = reducedMotion.matches ? 1 : rawProgress;
         const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
+        const targetLidScale = researchLidScale(focusView);
+        lid.scale.y = transitionActive ? startLidScale + (targetLidScale - startLidScale) * eased : targetLidScale;
+        // The focus point follows the screen's changing center during the
+        // portrait morph, while its normal stays perpendicular to the camera.
+        updateDestination(focusView);
         const targetZoom = closeupZoom(focusView);
         if (transitionActive) {
           camera.position.lerpVectors(startPosition, destinationPosition, eased);
@@ -366,8 +416,12 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
           camera.zoom = startZoom + (targetZoom - startZoom) * eased;
           if (progress === 1) transitionActive = false;
         } else {
-          // ResizeObserver can change the viewport during the parent FLIP animation.
+          // Keep the projected interface aligned after a responsive resize.
           camera.zoom = targetZoom;
+          if (focusView !== "desk") {
+            camera.position.copy(destinationPosition);
+            camera.quaternion.copy(destinationQuaternion);
+          }
         }
 
         let unsettled = 0;
@@ -382,6 +436,7 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         camera.updateProjectionMatrix();
         camera.updateMatrixWorld();
         renderer.render(scene, camera);
+        reportScreenBounds(focusView);
 
         if (!transitionActive && !settledNotified) {
           settledNotified = true;
@@ -399,7 +454,7 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
         const height = host.clientHeight;
         if (!width || !height) return;
         viewAspect = width / height;
-        viewHeight = viewAspect < 0.9 ? 7.5 : 6.45;
+        viewHeight = viewAspect < 0.9 ? 6.5 : 6.8;
         camera.left = -viewHeight * viewAspect / 2;
         camera.right = viewHeight * viewAspect / 2;
         camera.top = viewHeight / 2;
@@ -511,6 +566,7 @@ export function DeskScene({ className = "", focus = "desk", immersive = false, o
       setReady(true);
 
       teardown = () => {
+        screenBoundsRef.current?.(null);
         if (renderRequestRef.current === requestRender) renderRequestRef.current = null;
         if (frame) cancelAnimationFrame(frame);
         resizeObserver.disconnect();

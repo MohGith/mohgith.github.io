@@ -1,6 +1,8 @@
 # Jiawei Guo
 
-Personal homepage for research and photography. Published at https://van-lord.github.io/.
+Single-screen personal workspace for research and photography. Published at https://van-lord.github.io/.
+
+Selecting the laptop opens Research, Papers, and About directly inside its projected display. Only the content within that screen scrolls; there are no page sections below the main composition. Selecting the camera or photographs opens the unchanged live Gallery.
 
 ## Build
 
