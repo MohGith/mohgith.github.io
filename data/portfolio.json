@@ -1,0 +1,94 @@
+{
+  "publications": [
+    {
+      "title": "A hybrid transformer deep Q-network for path planning",
+      "journal": "Neurocomputing",
+      "year": "2026",
+      "authors": "J. Guo, Y. Cao, G. Song, J. Ou, and Y. Wang"
+    },
+    {
+      "title": "GPU-enabled decentralized multi-robot path planning based on global evolutionary dynamic programming and local particle swarm optimization",
+      "journal": "Expert Systems with Applications",
+      "year": "2026",
+      "authors": "J. Ou, G. Song, J. Guo, Y. Cao, and Y. Wang"
+    },
+    {
+      "title": "A transfer-learning TNet for multitask railroad inspection",
+      "journal": "Computers & Electrical Engineering",
+      "year": "2025",
+      "authors": "J. Guo, Y. Qian, and Y. Wang"
+    },
+    {
+      "title": "A memory and retrieval transformer-based unsupervised learning model for anomaly detection and segmentation",
+      "journal": "Pattern Recognition",
+      "year": "2025",
+      "authors": "J. Guo, G. Song, and Y. Wang"
+    },
+    {
+      "title": "An adversarial transformer for anomalous Lamb wave pattern detection",
+      "journal": "Neural Networks",
+      "year": "2025",
+      "authors": "J. Guo, S. Zhang, N. Amiri, L. Yu, and Y. Wang"
+    },
+    {
+      "title": "An auto-caption-guided hierarchical vision graph transformer for remote sensing image segmentation",
+      "journal": "ISPRS JPRS",
+      "year": "2025",
+      "authors": "G. Song, J. Guo, Y. Zhang, Y. Qian, and Y. Wang"
+    },
+    {
+      "title": "Inspection of cladding coating with wideband laser induced guided ultrasonic waves",
+      "journal": "TopFuel",
+      "year": "2025",
+      "authors": "A. Campbell, J. Guo, B. Chen, et al."
+    },
+    {
+      "title": "An autonomous multimodal system for intelligent railway inspection",
+      "journal": "PHM Society",
+      "year": "2025",
+      "authors": "B. Chen, J. Guo, Z. Qian, and Y. Wang"
+    },
+    {
+      "title": "RailNet: A lightweight transfer learning model for real-time rail component detection and defect segmentation",
+      "journal": "PHM Society",
+      "year": "2025",
+      "authors": "J. Guo, B. Chen, Q. Yu, and Y. Wang"
+    },
+    {
+      "title": "A dual-contrastive-attention transformer for unsupervised Lamb wave defect detection",
+      "journal": "PHM Society",
+      "year": "2025",
+      "authors": "J. Guo, B. Chen, S. Zhang, et al."
+    },
+    {
+      "title": "Narrowing signal distribution by adamantane derivatization for amino acid identification using an alpha-hemolysin nanopore",
+      "journal": "Nano Letters",
+      "year": "2024",
+      "authors": "X. Wei, D. Ma, J. Guo, et al."
+    },
+    {
+      "title": "An adaptively weighted loss-enabled lightweight teacher-student model for real-time railroad inspection on edge devices",
+      "journal": "Neural Computing and Applications",
+      "year": "2023",
+      "authors": "J. Guo, S. Zhang, Y. Qian, and Y. Wang"
+    },
+    {
+      "title": "A NanoDet model with adaptively weighted loss for real-time railroad inspection",
+      "journal": "PHM Society",
+      "year": "2023",
+      "authors": "J. Guo, S. Zhang, Y. Qian, and Y. Wang"
+    },
+    {
+      "title": "A theoretical energy loss calculation method for transformer district based on improved convolutional neural networks",
+      "journal": "IEEE TIA",
+      "year": "2022",
+      "authors": "Y. Ren, L. Zhang, J. Guo, et al."
+    },
+    {
+      "title": "Damage analysis on post-hurricane satellite images based on multiple variants of convolutional neural networks",
+      "journal": "ICBASE",
+      "year": "2021",
+      "authors": "J. Guo and S. Wu"
+    }
+  ]
+}
